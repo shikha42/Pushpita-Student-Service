@@ -20,14 +20,24 @@ namespace WebApplication1.Data
                 }
             }
 
-            string staffEmail = "aranna@iubat.edu";
+            // Clean up legacy staff seeds (aranna@iubat.edu, shakkhorpaul50@gmail.com) if they exist
+            foreach (var legacyEmail in new[] { "aranna@iubat.edu", "shakkhorpaul50@gmail.com" })
+            {
+                var legacy = await userManager.FindByEmailAsync(legacyEmail);
+                if (legacy != null)
+                {
+                    await userManager.DeleteAsync(legacy);
+                }
+            }
+
+            string staffEmail = "pushpita@iubat.edu";
             if (await userManager.FindByEmailAsync(staffEmail) == null)
             {
                 var staffUser = new ApplicationUser
                 {
                     UserName = staffEmail,
                     Email = staffEmail,
-                    FirstName = "Aranna",
+                    FirstName = "Pushpita",
                     LastName = "IUBAT",
                     EmailConfirmed = true
                 };
@@ -36,6 +46,19 @@ namespace WebApplication1.Data
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(staffUser, "Staff");
+                }
+            }
+            else
+            {
+                // Ensure existing pushpita has Staff role and correct password
+                var existing = await userManager.FindByEmailAsync(staffEmail);
+                if (existing != null)
+                {
+                    if (!await userManager.IsInRoleAsync(existing, "Staff"))
+                        await userManager.AddToRoleAsync(existing, "Staff");
+                    // Reset password to P@ssW0rd if needed (idempotent check)
+                    var token = await userManager.GeneratePasswordResetTokenAsync(existing);
+                    await userManager.ResetPasswordAsync(existing, token, "P@ssW0rd");
                 }
             }
         }
